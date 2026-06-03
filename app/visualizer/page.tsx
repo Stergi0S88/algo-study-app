@@ -1,235 +1,146 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-type AlgoType = 'bubble' | 'selection' | 'insertion' | 'merge' | 'quick';
+export default function LinearAlgebraPage() {
+  // Matrix values: [a, b, c, d] representing a 2x2 matrix
+  const [matrix, setMatrix] = useState<[number, number, number, number]>([1, 0, 0, 1]); // Default Identity matrix
+  // Original Vector [x, y]
+  const [vector, setVector] = useState<[number, number]>([2, 3]);
 
-export default function VisualizerPage() {
-  const [array, setArray] = useState<number[]>([]);
-  const [isSorting, setIsSorting] = useState(false);
-  const [currentPair, setCurrentPair] = useState<number[]>([]);
-  const [selectedAlgo, setSelectedAlgo] = useState<AlgoType>('bubble');
+  const [a, b, c, d] = matrix;
+  const [x, y] = vector;
 
-  useEffect(() => {
-    resetArray();
-  }, []);
+  // Compute transformed vector: Ax + By, Cx + Dy
+  const transformedX = a * x + b * y;
+  const transformedY = c * x + d * y;
 
-  const resetArray = () => {
-    if (isSorting) return;
-    const newArray = [];
-    for (let i = 0; i < 20; i++) { // Increased to 20 bars to see recursive splits clearer!
-      newArray.push(Math.floor(Math.random() * 180) + 20);
-    }
-    setArray(newArray);
-    setCurrentPair([]);
+  const handleMatrixChange = (index: number, val: string) => {
+    const num = parseFloat(val) || 0;
+    const newMatrix = [...matrix] as [number, number, number, number];
+    newMatrix[index] = num;
+    setMatrix(newMatrix);
   };
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  // --- BUBBLE SORT ---
-  const bubbleSort = async (arr: number[]) => {
-    let n = arr.length;
-    for (let i = 0; i < n - 1; i++) {
-      for (let j = 0; j < n - i - 1; j++) {
-        setCurrentPair([j, j + 1]);
-        await sleep(40);
-        if (arr[j] > arr[j + 1]) {
-          let temp = arr[j];
-          arr[j] = arr[j + 1];
-          arr[j + 1] = temp;
-          setArray([...arr]);
-        }
-      }
-    }
+  // Quick preset templates
+  const applyPreset = (type: 'identity' | 'scale' | 'rotate' | 'shear') => {
+    if (type === 'identity') setMatrix([1, 0, 0, 1]);
+    if (type === 'scale') setMatrix([2, 0, 0, 0.5]);
+    if (type === 'rotate') setMatrix([0, -1, 1, 0]); // 90 deg rotation
+    if (type === 'shear') setMatrix([1, 1, 0, 1]);
   };
 
-  // --- SELECTION SORT ---
-  const selectionSort = async (arr: number[]) => {
-    let n = arr.length;
-    for (let i = 0; i < n - 1; i++) {
-      let minIdx = i;
-      for (let j = i + 1; j < n; j++) {
-        setCurrentPair([i, j]);
-        await sleep(40);
-        if (arr[j] < arr[minIdx]) minIdx = j;
-      }
-      let temp = arr[minIdx];
-      arr[minIdx] = arr[i];
-      arr[i] = temp;
-      setArray([...arr]);
-    }
+  // SVG grid dimensions config
+  const width = 300;
+  const height = 300;
+  const center = 150;
+  const scaleFactor = 25; // pixels per unit grid line
+
+  // Helper to map math coordinates to SVG pixels
+  const toSvgCoords = (mx: number, my: number) => {
+    return {
+      cx: center + mx * scaleFactor,
+      cy: center - my * scaleFactor, // Invert Y because SVG coordinates go down
+    };
   };
 
-  // --- INSERTION SORT ---
-  const insertionSort = async (arr: number[]) => {
-    let n = arr.length;
-    for (let i = 1; i < n; i++) {
-      let key = arr[i];
-      let j = i - 1;
-      while (j >= 0 && arr[j] > key) {
-        setCurrentPair([j, j + 1]);
-        arr[j + 1] = arr[j];
-        j = j - 1;
-        setArray([...arr]);
-        await sleep(40);
-      }
-      arr[j + 1] = key;
-      setArray([...arr]);
-    }
-  };
-
-  // --- MERGE SORT (Recursive) ---
-  const mergeSort = async (arr: number[], start: number, end: number) => {
-    if (start >= end) return;
-    const mid = Math.floor((start + end) / 2);
-    
-    await mergeSort(arr, start, mid);
-    await mergeSort(arr, mid + 1, end);
-    await merge(arr, start, mid, end);
-  };
-
-  const merge = async (arr: number[], start: number, mid: number, end: number) => {
-    let left = arr.slice(start, mid + 1);
-    let right = arr.slice(mid + 1, end + 1);
-    let i = 0, j = 0, k = start;
-
-    while (i < left.length && j < right.length) {
-      setCurrentPair([k]);
-      await sleep(60);
-      if (left[i] <= right[j]) {
-        arr[k] = left[i];
-        i++;
-      } else {
-        arr[k] = right[j];
-        j++;
-      }
-      setArray([...arr]);
-      k++;
-    }
-
-    while (i < left.length) {
-      arr[k] = left[i];
-      i++; k++;
-      setArray([...arr]);
-      await sleep(60);
-    }
-    while (j < right.length) {
-      arr[k] = right[j];
-      j++; k++;
-      setArray([...arr]);
-      await sleep(60);
-    }
-  };
-
-  // --- QUICK SORT (Recursive) ---
-  const quickSort = async (arr: number[], low: number, high: number) => {
-    if (low < high) {
-      let pi = await partition(arr, low, high);
-      await quickSort(arr, low, pi - 1);
-      await quickSort(arr, pi + 1, high);
-    }
-  };
-
-  const partition = async (arr: number[], low: number, high: number) => {
-    let pivot = arr[high];
-    let i = low - 1;
-
-    for (let j = low; j < high; j++) {
-      setCurrentPair([j, high]); // high is pivot
-      await sleep(60);
-      if (arr[j] < pivot) {
-        i++;
-        let temp = arr[i];
-        arr[i] = arr[j];
-        arr[j] = temp;
-        setArray([...arr]);
-      }
-    }
-    let temp = arr[i + 1];
-    arr[i + 1] = arr[high];
-    arr[high] = temp;
-    setArray([...arr]);
-    return i + 1;
-  };
-
-  const handleSort = async () => {
-    setIsSorting(true);
-    const arrCopy = [...array];
-    
-    if (selectedAlgo === 'bubble') await bubbleSort(arrCopy);
-    if (selectedAlgo === 'selection') await selectionSort(arrCopy);
-    if (selectedAlgo === 'insertion') await insertionSort(arrCopy);
-    if (selectedAlgo === 'merge') await mergeSort(arrCopy, 0, arrCopy.length - 1);
-    if (selectedAlgo === 'quick') await quickSort(arrCopy, 0, arrCopy.length - 1);
-
-    setCurrentPair([]);
-    setIsSorting(false);
-  };
-
-  // Dynamic explanations based on selection
-  const algoDetails = {
-    bubble: { title: 'Bubble Sort', time: 'O(n²)', space: 'O(1)', desc: 'Repeatedly swaps adjacent elements if they are in the wrong order. Heavy writing, slow execution.' },
-    selection: { title: 'Selection Sort', time: 'O(n²)', space: 'O(1)', desc: 'Scans the unsorted pool to locate the minimum element, moving it upfront with exactly one swap per pass.' },
-    insertion: { title: 'Insertion Sort', time: 'O(n²)', space: 'O(1)', desc: 'Builds a sorted subsystem shift-by-shift by sliding new unsorted values back into their exact relative position.' },
-    merge: { title: 'Merge Sort', time: 'O(n log n)', space: 'O(n)', desc: 'Divide and conquer. Breaks down arrays completely, then sorts and builds them back up. Uses structural extra memory.' },
-    quick: { title: 'Quick Sort', time: 'O(n log n)', space: 'O(log n)', desc: 'Partitions items around a chosen pivot element. Fast in-place recursive clustering.' },
-  };
+  const origSvg = toSvgCoords(x, y);
+  const transSvg = toSvgCoords(transformedX, transformedY);
 
   return (
     <main className="min-h-screen bg-slate-900 text-slate-100 p-8 flex flex-col items-center justify-center">
-      <div className="max-w-3xl w-full">
-        <h1 className="text-3xl font-bold text-cyan-400 mb-2">📊 Algorithm Study Suite</h1>
-        <p className="text-slate-400 mb-6 text-sm">Analyze structural sorting profiles across recursive and brute-force paradigms.</p>
+      <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        {/* Left Control Panel */}
+        <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-emerald-400 mb-2">🔢 Matrix Vector Transformer</h1>
+            <p className="text-slate-400 text-sm mb-6">Modify the 2x2 matrix grid to physically transform vector space.</p>
 
-        {/* Control Box */}
-        <div className="flex flex-wrap gap-4 mb-6 items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <select 
-            value={selectedAlgo} 
-            onChange={(e) => setSelectedAlgo(e.target.value as AlgoType)}
-            disabled={isSorting}
-            className="bg-slate-950 border border-slate-700 text-slate-100 px-4 py-2 rounded-lg focus:outline-none focus:border-cyan-500 cursor-pointer"
-          >
-            <option value="bubble">Bubble Sort</option>
-            <option value="selection">Selection Sort</option>
-            <option value="insertion">Insertion Sort</option>
-            <option value="merge">Merge Sort (Recursive)</option>
-            <option value="quick">Quick Sort (Recursive)</option>
-          </select>
+            {/* Matrix Inputs */}
+            <h3 className="text-sm font-semibold text-slate-300 mb-2">Transformation Matrix (A)</h3>
+            <div className="grid grid-cols-2 gap-3 max-w-[200px] mb-6 p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <input type="number" step="0.5" value={a} onChange={(e) => handleMatrixChange(0, e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-emerald-400 font-mono" />
+              <input type="number" step="0.5" value={b} onChange={(e) => handleMatrixChange(1, e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-emerald-400 font-mono" />
+              <input type="number" step="0.5" value={c} onChange={(e) => handleMatrixChange(2, e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-emerald-400 font-mono" />
+              <input type="number" step="0.5" value={d} onChange={(e) => handleMatrixChange(3, e.target.value)} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-emerald-400 font-mono" />
+            </div>
 
-          <button onClick={resetArray} disabled={isSorting} className="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-600 disabled:opacity-50 transition text-sm font-medium">
-            Generate New Array
-          </button>
-          
-          <button onClick={handleSort} disabled={isSorting} className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold rounded-lg disabled:opacity-50 transition text-sm ml-auto">
-            {isSorting ? 'Sorting...' : `Run ${selectedAlgo.toUpperCase()}`}
-          </button>
-        </div>
+            {/* Vector Inputs */}
+            <h3 className="text-sm font-semibold text-slate-300 mb-2">Input Vector (v)</h3>
+            <div className="flex gap-3 max-w-[200px] mb-6 p-3 bg-slate-900 border border-slate-800 rounded-lg">
+              <div className="flex items-center gap-1 w-1/2">
+                <span className="text-xs text-slate-500 font-mono">X:</span>
+                <input type="number" value={x} onChange={(e) => setVector([parseFloat(e.target.value) || 0, y])} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-cyan-400 font-mono" />
+              </div>
+              <div className="flex items-center gap-1 w-1/2">
+                <span className="text-xs text-slate-500 font-mono">Y:</span>
+                <input type="number" value={y} onChange={(e) => setVector([x, parseFloat(e.target.value) || 0])} className="w-full bg-slate-950 border border-slate-700 text-center rounded py-1 text-cyan-400 font-mono" />
+              </div>
+            </div>
 
-        {/* The Board */}
-        <div className="h-64 bg-slate-950 rounded-xl p-6 flex items-end justify-center gap-2 border border-slate-800 mb-6">
-          {array.map((value, idx) => {
-            const isComparing = currentPair.includes(idx);
-            return (
-              <div
-                key={idx}
-                className={`w-6 rounded-t transition-all duration-70 ${isComparing ? 'bg-rose-500 scale-110 shadow-lg shadow-rose-500/20' : 'bg-cyan-500'}`}
-                style={{ height: `${value}px` }}
-              />
-            );
-          })}
-        </div>
-
-        {/* Dynamic Study Card */}
-        <div className="bg-slate-950 border border-slate-800 p-5 rounded-xl">
-          <div className="flex justify-between items-center mb-2 border-b border-slate-800 pb-2">
-            <h3 className="font-bold text-lg text-slate-200">{algoDetails[selectedAlgo].title} Profile</h3>
-            <div className="flex gap-3 text-xs">
-              <span className="px-2 py-1 bg-slate-800 text-emerald-400 rounded">Time: {algoDetails[selectedAlgo].time}</span>
-              <span className="px-2 py-1 bg-slate-800 text-amber-400 rounded">Space: {algoDetails[selectedAlgo].space}</span>
+            {/* Presets */}
+            <h3 className="text-sm font-semibold text-slate-300 mb-2">Preset Matrix Profiles</h3>
+            <div className="flex flex-wrap gap-2 mb-6">
+              <button onClick={() => applyPreset('identity')} className="px-3 py-1.5 bg-slate-800 text-xs rounded hover:bg-slate-700 transition">Identity</button>
+              <button onClick={() => applyPreset('scale')} className="px-3 py-1.5 bg-slate-800 text-xs rounded hover:bg-slate-700 transition">Stretch Scale</button>
+              <button onClick={() => applyPreset('rotate')} className="px-3 py-1.5 bg-slate-800 text-xs rounded hover:bg-slate-700 transition">90° Rotation</button>
+              <button onClick={() => applyPreset('shear')} className="px-3 py-1.5 bg-slate-800 text-xs rounded hover:bg-slate-700 transition">Shear Map</button>
             </div>
           </div>
-          <p className="text-sm text-slate-400 leading-relaxed">{algoDetails[selectedAlgo].desc}</p>
+
+          {/* Mathematical Output Readout */}
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl font-mono text-xs text-slate-300 space-y-1">
+            <p className="text-slate-500">// Output Calculation Result</p>
+            <p>Vector Original : [{x}, {y}]</p>
+            <p className="text-emerald-400">Vector Transformed: [{transformedX.toFixed(2)}, {transformedY.toFixed(2)}]</p>
+          </div>
         </div>
+
+        {/* Right Canvas Screen Visualizer */}
+        <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+          <svg width={width} height={height} className="bg-slate-900 rounded-lg border border-slate-800">
+            {/* Draw Graph Grid Mesh Lines */}
+            {Array.from({ length: 13 }).map((_, i) => {
+              const pos = i * scaleFactor;
+              return (
+                <React.Fragment key={i}>
+                  <line x1={pos} y1={0} x2={pos} y2={height} stroke="#1e293b" strokeWidth="1" />
+                  <line x1={0} y1={pos} x2={width} y2={pos} stroke="#1e293b" strokeWidth="1" />
+                </React.Fragment>
+              );
+            })}
+
+            {/* Primary X & Y Graph Axes */}
+            <line x1={0} y1={center} x2={width} y2={center} stroke="#475569" strokeWidth="2" />
+            <line x1={center} y1={0} x2={center} y2={height} stroke="#475569" strokeWidth="2" />
+
+            {/* Marker Definitions for Arrow Heads */}
+            <defs>
+              <marker id="cyan-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#06b6d4" />
+              </marker>
+              <marker id="emerald-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+              </marker>
+            </defs>
+
+            {/* Original Vector Arrow Line (Cyan) */}
+            <line x1={center} y1={center} x2={origSvg.cx} y2={origSvg.cy} stroke="#06b6d4" strokeWidth="3" markerEnd="url(#cyan-arrow)" />
+            
+            {/* Transformed Vector Arrow Line (Emerald) */}
+            <line x1={center} y1={center} x2={transSvg.cx} y2={transSvg.cy} stroke="#10b981" strokeWidth="3" strokeDasharray="4 2" markerEnd="url(#emerald-arrow)" />
+
+            {/* Origin Anchor point */}
+            <circle cx={center} cy={center} r="4" fill="#ffffff" />
+          </svg>
+          
+          <div className="flex gap-4 mt-4 text-xs">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-cyan-500"></div> <span className="text-slate-400">Original Vector</span></div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-emerald-500 border-dashed border-t"></div> <span className="text-slate-400">Transformed Space</span></div>
+          </div>
+        </div>
+
       </div>
     </main>
   );
